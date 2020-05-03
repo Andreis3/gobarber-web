@@ -3,8 +3,11 @@ import { FiLogIn, FiMail, FiLock } from 'react-icons/fi';
 import { FormHandles } from '@unform/core';
 import { Form } from '@unform/web';
 import * as Yup from 'yup';
+import { Link } from 'react-router-dom';
 
 import { useAuth } from '../../hooks/AuthContext';
+import { useToast } from '../../hooks/ToastContext';
+
 import getValidationErrors from '../../utils/getValidationErrors';
 
 import logoImg from '../../assets/logo.svg';
@@ -12,7 +15,7 @@ import logoImg from '../../assets/logo.svg';
 import Input from '../../components/input';
 import Button from '../../components/button';
 
-import { Container, Content, Background } from './styles';
+import { Container, Content, AnimationContainer, Background } from './styles';
 
 interface SignInFormData {
   email: string;
@@ -22,9 +25,8 @@ interface SignInFormData {
 const SignIn: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
 
-  const { user, signIn } = useAuth();
-
-  console.log(user);
+  const { signIn } = useAuth();
+  const { addToast } = useToast();
 
   const handleSubmit = useCallback(
     async (data: SignInFormData) => {
@@ -42,43 +44,56 @@ const SignIn: React.FC = () => {
           abortEarly: false,
         });
 
-        signIn({
+        await signIn({
           email: data.email,
           password: data.password,
         });
       } catch (err) {
-        const errors = getValidationErrors(err);
-        formRef.current?.setErrors(errors);
+        if (err instanceof Yup.ValidationError) {
+          const errors = getValidationErrors(err);
+
+          formRef.current?.setErrors(errors);
+
+          return;
+        }
+
+        addToast({
+          type: 'error',
+          title: 'Erro na autenticação',
+          description: 'Ocorreu um erro ao fazer login, cheque as credenciais',
+        });
       }
     },
-    [signIn],
+    [signIn, addToast],
   );
   return (
     <Container>
       <Content>
-        <img src={logoImg} alt="GoBarber" />
+        <AnimationContainer>
+          <img src={logoImg} alt="GoBarber" />
 
-        <Form ref={formRef} onSubmit={handleSubmit}>
-          <h1> Faça seu login </h1>
+          <Form ref={formRef} onSubmit={handleSubmit}>
+            <h1> Faça seu login </h1>
 
-          <Input name="email" icon={FiMail} placeholder="E-mail" />
+            <Input name="email" icon={FiMail} placeholder="E-mail" />
 
-          <Input
-            name="password"
-            icon={FiLock}
-            type="password"
-            placeholder="Senha"
-          />
+            <Input
+              name="password"
+              icon={FiLock}
+              type="password"
+              placeholder="Senha"
+            />
 
-          <Button type="submit">Entrar</Button>
+            <Button type="submit">Entrar</Button>
 
-          <a href="forgot">Esqueci minha senha</a>
-        </Form>
+            <a href="forgot">Esqueci minha senha</a>
+          </Form>
 
-        <a href="Login">
-          <FiLogIn />
-          Criar Conta
-        </a>
+          <Link to="/signup">
+            <FiLogIn />
+            Criar Conta
+          </Link>
+        </AnimationContainer>
       </Content>
       <Background />
     </Container>
